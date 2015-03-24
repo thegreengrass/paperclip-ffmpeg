@@ -249,6 +249,7 @@ module Paperclip
       Ffmpeg.log("file.path: #{@file.path}")
       command = "#{av_lib_version} \"#{File.expand_path(@file.path)}\" 2>&1"
       Paperclip.log("[ffmpeg] #{command}")
+      Ffmpeg.log("TEST?!")
       Ffmpeg.log("ok..LINE 250")
       ffmpeg = Cocaine::CommandLine.new(command).run
       Ffmpeg.log("Line 254?!")
