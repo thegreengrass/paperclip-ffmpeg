@@ -251,6 +251,7 @@ module Paperclip
       Paperclip.log("[ffmpeg] #{command}")
       Ffmpeg.log("ok..LINE 250")
       ffmpeg = Cocaine::CommandLine.new(command).run
+      Ffmpeg.log("Line 254?!")
       ffmpeg.split("\n").each do |line|
         if line =~ /(([\d\.]*)\s.?)fps,/
           meta[:fps] = $1.to_i
