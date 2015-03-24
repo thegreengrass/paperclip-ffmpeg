@@ -9,10 +9,12 @@ module Paperclip
     # +whiny+ is true (which it is, by default. If +convert_options+ is
     # set, the options will be appended to the convert command upon video transcoding.
     def initialize file, options = {}, attachment = nil
+
       @convert_options = {
         :input => {},
         :output => { :y => nil }
       }
+
       unless options[:convert_options].nil? || options[:convert_options].class != Hash
         unless options[:convert_options][:input].nil? || options[:convert_options][:input].class != Hash
           @convert_options[:input].reverse_merge! options[:convert_options][:input]
@@ -38,6 +40,12 @@ module Paperclip
       @meta             = identify
       @pad_color        = options[:pad_color].nil? ? "black" : options[:pad_color]
       @auto_rotate      = options[:auto_rotate]
+
+      Ffmpeg.log "current_format: #{@current_format}"
+      Ffmpeg.log "basename: #{@basename}"
+
+      Ffmpeg.log options
+
       attachment.instance_write(:meta, @meta)
     end
     # Performs the transcoding of the +file+ into a thumbnail/video. Returns the Tempfile
@@ -46,7 +54,8 @@ module Paperclip
       Ffmpeg.log("Making...") if @whiny
       src = @file
       Ffmpeg.log("Building Destination File: '#{@basename}' + '#{@format}'") if @whiny
-      dst = Tempfile.new([@basename, @format ? ".#{@format}" : ''])
+      # dst = Tempfile.new([@basename, @format ? ".#{@format}" : ''])
+      dst = Tempfile.new([@basename, ".mp4" ])
       Ffmpeg.log("Destination File Built") if @whiny
       dst.binmode
 
@@ -176,6 +185,10 @@ module Paperclip
       # Validations on the values. These could be either nil.
       parameters << @convert_options[:input].map { |k,v| "-#{k.to_s} #{v} " if !v.nil? && (v.is_a?(Numeric) || !v.empty?) }
       parameters << "-i :source"
+
+      # TEST: Put in image to overlay
+      parameters << "-i :image -filter_complex \"[0:v][1:v] overlay=10:10:enable='between(t,0,5)'\""
+
       parameters << @convert_options[:output].map { |k,v| "-#{k.to_s} #{v} " if !v.nil? && (v.is_a?(Numeric) || !v.empty?) }
       parameters << "-y :dest"
 
@@ -185,7 +198,17 @@ module Paperclip
       Ffmpeg.log(parameters)
       begin
         av_lib_version = Ffmpeg.detect_ffmpeg_or_avconv
-        success = Paperclip.run(av_lib_version, parameters, :source => "#{File.expand_path(src.path)}", :dest => File.expand_path(dst.path))
+        # success = Paperclip.run(av_lib_version, parameters, :source => "#{File.expand_path(src.path)}", :dest => File.expand_path(dst.path))
+
+        success = 
+          Paperclip.run(
+            av_lib_version, 
+            parameters, 
+            :source => "#{File.expand_path('public/videos/test.mp4')}",
+            :image => "#{File.expand_path(src.path)}",
+             # :dest => File.expand_path('public/videos/TESTTT.mp4')
+            :dest => File.expand_path(dst.path)
+          )
       rescue Cocaine::ExitStatusError => e
         raise Paperclip::Error, "error while processing video for #{@basename}: #{e}" if @whiny
       end
@@ -223,8 +246,10 @@ module Paperclip
     def identify
       meta = {}
       av_lib_version = Ffmpeg.detect_ffprobe_or_avprobe
+      Ffmpeg.log("file.path: #{@file.path}")
       command = "#{av_lib_version} \"#{File.expand_path(@file.path)}\" 2>&1"
       Paperclip.log("[ffmpeg] #{command}")
+      Ffmpeg.log("ok..LINE 250")
       ffmpeg = Cocaine::CommandLine.new(command).run
       ffmpeg.split("\n").each do |line|
         if line =~ /(([\d\.]*)\s.?)fps,/
