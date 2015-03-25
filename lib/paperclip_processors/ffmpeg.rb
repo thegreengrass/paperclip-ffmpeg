@@ -37,14 +37,19 @@ module Paperclip
       @current_format   = File.extname(@file.path)
       @basename         = File.basename(@file.path, @current_format)
       @exiftool         = options[:use_exiftool].nil? ? false : options[:use_exiftool]
-      @meta             = identify
-      @pad_color        = options[:pad_color].nil? ? "black" : options[:pad_color]
-      @auto_rotate      = options[:auto_rotate]
 
       Ffmpeg.log "current_format: #{@current_format}"
       Ffmpeg.log "basename: #{@basename}"
 
       Ffmpeg.log options
+
+      # BREAKS HERE.
+      @meta             = identify
+
+
+      @pad_color        = options[:pad_color].nil? ? "black" : options[:pad_color]
+      @auto_rotate      = options[:auto_rotate]
+
 
       attachment.instance_write(:meta, @meta)
     end
